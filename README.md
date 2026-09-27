@@ -1,7 +1,7 @@
-# polux-server
-**_Polux_** is a hobby web-app project aimed at replicating some of the capabilities of file management software like _Google Drive_. 
-The **polux-server** is the back-end component of this project.
-The fron-end companion to this can be found here [polux-client github](https://github.com/Rhythm-Mondal/polux-client). 
+# pollux-server
+**_Pollux_** is a hobby web-app project aimed at replicating some of the capabilities of file management software like _Google Drive_. 
+The **pollux-server** is the back-end component of this project.
+The fron-end companion to this can be found here [pollux-client github](https://github.com/Rhythm-Mondal/pollux-client). 
 
 # setup
 The setup **assumes** that the project is going to run on linux machine with python 3.12 and your system can execute Makefiles\
@@ -23,7 +23,7 @@ make db-setup
 This will create a db and role for the app to access on you locally install postgres. The database-name, role-name and role password will depend on the `.env` file. You are free to modify this file.
 **Will require _sudo_ from user**
 
-# run polux-server
+# run pollux-server
 To run this project simply run the following command
 ```
 make run
