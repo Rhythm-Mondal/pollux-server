@@ -3,38 +3,45 @@
 The **pollux-server** is the back-end component of this project.
 The fron-end companion to this can be found here [pollux-client github](https://github.com/Rhythm-Mondal/pollux-client). 
 
-# setup
-The setup **assumes** that the project is going to run on linux machine with python 3.12 and your system can execute Makefiles\
-The run the following make command to set up this project\
-```
-make setup
-```
-This will do the following,
+# Development setup
 
-- set up virtualenv `.venv`
-- install required packages which includes `black` & `pipreqs`
-- set up a sample of a local environment file `.env`
-- set up local **postgres** if not installed
+## Prerequisites
 
-Then run the following make command
-```
-make db-setup
-```
-This will create a db and role for the app to access on you locally install postgres. The database-name, role-name and role password will depend on the `.env` file. You are free to modify this file.
-**Will require _sudo_ from user**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Docker Compose enabled.
+- GNU Make. On Windows, use the Make installation provided by your development environment or run the equivalent `docker compose` commands directly.
 
-# run pollux-server
-To run this project simply run the following command
-```
-make run
+## First run
+
+Create a local environment file from the committed template:
+
+```bash
+make env
 ```
 
-# other utilities 
-The project's `Makefile` also has other commands.
+Review `.env` and replace the sample `SECRET_KEY` and database password before using the project outside local development.
 
-- to enter local database use `make db-login`
-- to format use `make format`
-- to generate **requirement.txt** use `make reqs-gen-regen`
+Validate the Compose configuration, then build and start the API and PostgreSQL services:
+
+```bash
+make check
+make up
+```
+
+The API is available at `http://localhost:8000`, with interactive API documentation at `http://localhost:8000/docs`. Source changes reload the API automatically. PostgreSQL data persists in the local `postgres_data` Docker volume, and the required `ltree` extension is created when that volume is initialized.
+
+## Daily commands
+
+```bash
+make up-d       # start in the background
+make logs-api   # follow API logs
+make logs-db    # follow PostgreSQL logs
+make ps         # show service status
+make down       # stop the development stack
+```
+
+Run `make api-shell` to open a shell in the API container, or `make db-shell` to open `psql` in the PostgreSQL container.
+
+`make db-reset` removes the local PostgreSQL volume and recreates the database. It permanently deletes local development data.
 
 
 # API definitions

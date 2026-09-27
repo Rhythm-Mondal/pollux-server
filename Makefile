@@ -1,109 +1,82 @@
 SHELL := /bin/bash
 
-PYTHON := python3.12
-VENV := .venv
-BIN := $(VENV)/bin
-PIP := $(BIN)/pip
-
-UVICORN := $(BIN)/uvicorn
-APP_MODULE := app.main:app
-HOST := 0.0.0.0
-PORT := 8000
-
-BLACK := $(BIN)/black
-PIPREQS := $(BIN)/pipreqs
-
+COMPOSE ?= docker compose
+COMPOSE_FILE := compose.yml
 ENV_FILE := .env
-include $(ENV_FILE)
+ENV_EXAMPLE := .env.example
 
-.PHONY: setup
+.DEFAULT_GOAL := help
 
-setup:
-	@echo "🔹 Checking virtual environment..."
-	@if [ ! -d "$(VENV)" ]; then \
-		echo "Creating virtual environment..."; \
-		$(PYTHON) -m venv $(VENV); \
-	fi
+.PHONY: help env check build up up-d down restart ps logs logs-api logs-db \
+	api-shell db-shell db-login db-reset
 
-	@echo "🔹 Upgrading pip..."
-	@$(PIP) install --upgrade pip
+help:
+	@echo "Pollux development commands:"
+	@echo "  make env        Create .env from .env.example when it is missing"
+	@echo "  make check      Validate the Compose configuration"
+	@echo "  make build      Build the API image"
+	@echo "  make up         Start the development stack"
+	@echo "  make up-d       Start the development stack in the background"
+	@echo "  make down       Stop the development stack"
+	@echo "  make restart    Restart the development stack"
+	@echo "  make ps         Show service status"
+	@echo "  make logs       Follow logs for all services"
+	@echo "  make logs-api   Follow API logs"
+	@echo "  make logs-db    Follow PostgreSQL logs"
+	@echo "  make api-shell  Open a shell in the API container"
+	@echo "  make db-shell   Open a PostgreSQL shell"
+	@echo "  make db-reset   Remove the local database volume and recreate it"
 
-	@echo "🔹 Creating environment file..."
-	@if [ ! -f $(ENV_FILE) ]; then \
-	    echo "SERVER_URL=" >> $(ENV_FILE); \
-	    echo "SECRET_KEY=" >> $(ENV_FILE); \
-		echo "TOKEN_EXPIRE_MINUTES=1440" >> $(ENV_FILE); \
-		echo "DB_USER=" >> $(ENV_FILE); \
-		echo "DB_PWD=" >> $(ENV_FILE); \
-		echo "DB_HOST=" >> $(ENV_FILE); \
-		echo "DB_PORT=" >> $(ENV_FILE); \
-		echo "DB_NAME=" >> $(ENV_FILE); \
+$(ENV_FILE):
+	@if [ -f "$(ENV_EXAMPLE)" ]; then \
+		cp "$(ENV_EXAMPLE)" "$(ENV_FILE)"; \
+		echo "Created $(ENV_FILE). Update its development values before sharing it."; \
 	else \
-		echo ".env file already exists, skipping"; \
-	fi
-
-	@echo "🔹 Installing dev tools (black, pipreqs)..."
-	@$(PIP) install black pipreqs
-
-	@echo "🔹 Installing requirements.txt (if present)..."
-	@if [ -f requirements.txt ]; then \
-		$(PIP) install -r requirements.txt; \
-	else \
-		echo "requirements.txt not found, skipping"; \
-	fi
-
-	@echo "🔹 Checking PostgreSQL client..."
-	@if ! command -v psql >/dev/null 2>&1; then \
-		echo "Installing PostgreSQL client..."; \
-		sudo apt update && sudo apt install -y postgresql-client; \
-	else \
-		echo "PostgreSQL client already installed"; \
-	fi
-
-	@echo "✅ Setup complete"
-
-db-setup:
-	@echo "🔹 Setting up Postgres database and role..."
-	@if [ ! -f $(ENV_FILE) ]; then \
-		echo "❌ .env file not found. Please create it first"; \
+		echo "$(ENV_EXAMPLE) is missing; cannot create $(ENV_FILE)."; \
 		exit 1; \
 	fi
-	@DB_NAME=$$(grep -E '^DB_NAME=' $(ENV_FILE) | cut -d '=' -f2); \
-	DB_USER=$$(grep -E '^DB_USER=' $(ENV_FILE) | cut -d '=' -f2); \
-	DB_PWD=$$(grep -E '^DB_PWD=' $(ENV_FILE) | cut -d '=' -f2); \
-	if [ -z "$$DB_NAME" ] || [ -z "$$DB_USER" ] || [ -z "$$DB_PWD" ]; then \
-		echo "❌ DB_NAME, DB_USER, and DB_PWD must be defined in .env"; \
-		exit 1; \
-	fi; \
-	echo "Checking if role $$DB_USER exists..."; \
-	ROLE_EXISTS=$$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$$DB_USER'"); \
-	if [ "$$ROLE_EXISTS" != "1" ]; then \
-		echo "Creating role $$DB_USER..."; \
-		sudo -u postgres psql -c "CREATE ROLE $$DB_USER WITH LOGIN PASSWORD '$$DB_PWD';"; \
-	else \
-		echo "Role $$DB_USER already exists, skipping"; \
-	fi; \
-	echo "Checking if database $$DB_NAME exists..."; \
-	DB_EXISTS=$$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$$DB_NAME'"); \
-	if [ "$$DB_EXISTS" != "1" ]; then \
-		echo "Creating database $$DB_NAME..."; \
-		sudo -u postgres psql -c "CREATE DATABASE $$DB_NAME OWNER $$DB_USER;"; \
-	else \
-		echo "Database $$DB_NAME already exists, skipping"; \
-	fi; \
-	echo "Granting all privileges on database $$DB_NAME to $$DB_USER..."; \
-	sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $$DB_NAME TO $$DB_USER;"
-	echo "Creating extension LTREE database $$DB_NAME"; \
-	sudo -u postgres $$DB_NAME -c "CREATE EXTENSION IF NOT EXISTS ltree;"
 
-db-login:
-	psql postgresql://$(DB_USER):$(DB_PWD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)
+env: $(ENV_FILE)
 
-run:
-	@$(UVICORN) $(APP_MODULE) --host $(HOST) --port $(PORT) --reload
+check: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) config -q
 
-format:
-	@$(BLACK) app/
+build: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) build
 
-reqs-gen-regen:
-	@$(PIPREQS) . --ignore .venv/ --force
+up: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) up --build
+
+up-d: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) up --build --detach
+
+down:
+	@$(COMPOSE) -f $(COMPOSE_FILE) down
+
+restart: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) down
+	@$(COMPOSE) -f $(COMPOSE_FILE) up --build --detach
+
+ps: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) ps
+
+logs: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) logs --follow
+
+logs-api: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) logs --follow pollux
+
+logs-db: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) logs --follow pollux-pg
+
+api-shell: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) exec pollux sh
+
+db-shell: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) exec pollux-pg sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
+
+db-login: db-shell
+
+db-reset: $(ENV_FILE)
+	@$(COMPOSE) -f $(COMPOSE_FILE) down --volumes --remove-orphans
+	@$(COMPOSE) -f $(COMPOSE_FILE) up --build --detach
