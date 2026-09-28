@@ -17,7 +17,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PWD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/01-ltree.sql:/docker-entrypoint-initdb.d/01-ltree.sql:ro
