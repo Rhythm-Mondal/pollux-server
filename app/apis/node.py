@@ -90,8 +90,8 @@ def create_folder(
     return {"message": "Folder created successfully"}
 
 
-@router.get("/me/nodes/{node_id}", response_model=GetNodeResponse)
-@router.get("/{space_id}/nodes/{node_id}", response_model=GetNodeResponse)
+@router.get("/me/nodes/{node_id}/info", response_model=GetNodeResponse)
+@router.get("/{space_id}/nodes/{node_id}/info", response_model=GetNodeResponse)
 def get_node_metadata(
     node_id: int,
     space_id: UUID = Depends(logic_resolve_default_space_id),
@@ -114,8 +114,8 @@ def list_space_nodes(
     return {"nodes": nodes, "total": total}
 
 
-@router.get("/me/nodes/{node_id}/list", response_model=ListFolderNodesResponse)
-@router.get("/{space_id}/nodes/{node_id}/list", response_model=ListFolderNodesResponse)
+@router.get("/me/nodes/{node_id}", response_model=ListFolderNodesResponse)
+@router.get("/{space_id}/nodes/{node_id}", response_model=ListFolderNodesResponse)
 def list_folder_nodes(
     node_id: int,
     space_id: UUID = Depends(logic_resolve_default_space_id),

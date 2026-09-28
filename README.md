@@ -226,7 +226,7 @@ POST /spaces/{space_id}/nodes/folders
 
 body: {
     name: str
-    parent_id: int
+    parent_id: int   [optional]
 }
 
 responses:
@@ -239,8 +239,8 @@ responses:
 
 ### 3.3 Get File/Folder Meta
 ```
-GET /spaces/me/nodes/{node_id}
-GET /spaces/{space_id}/nodes/{node_id}
+GET /spaces/me/nodes/{node_id}/info
+GET /spaces/{space_id}/nodes/{node_id}/info
 
 responses:
 400 Bad request
@@ -310,8 +310,8 @@ resposes:
 
 ### 3.5 List Folder Content
 ```
-GET /spaces/me/nodes/{node_id}/list
-GET /spaces/{space_id}/nodes/{node_id}/list
+GET /spaces/me/nodes/{node_id}
+GET /spaces/{space_id}/nodes/{node_id}
 
 params: {
     *text: str       [optional][not implemented yet]
